@@ -1,0 +1,1 @@
+export const dbName = "sample_mflix"
