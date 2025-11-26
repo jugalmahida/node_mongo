@@ -21,7 +21,8 @@
   "license": "ISC",
   "description": "Professional Node.js with MongoDB",
   "devDependencies": {
-    "nodemon": "^3.1.10"
+    "nodemon": "^3.1.10",
+    "prettier": "^3.6.2"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
