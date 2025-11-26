@@ -26,6 +26,10 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: true,
   },
+  profilePictureUrl: {
+    type: String,
+    default: null,
+  },
   verificationCode: { type: String },
   expiresAt: { type: Date },
   createdAt: { type: Date, default: Date.now },

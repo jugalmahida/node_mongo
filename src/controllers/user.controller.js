@@ -3,8 +3,11 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import transporter from "../utils/mailService.js";
 import userModel from "../models/user.model.js";
-const JWT_SECRET = process.env.JWT_SECRET || "default_secret";
 import crypto from "crypto";
+import { promises as fs } from "fs";
+import cloudinary from "../config/cloudinary.js";
+
+const JWT_SECRET = process.env.JWT_SECRET || "default_secret";
 
 // Function to generate a random 6-digit code (using crypto for better security)
 const generateVerificationCode = () => {
@@ -68,12 +71,10 @@ export const verifyCode = async (req, res) => {
     }
 
     if (!admin.verificationCode) {
-      return res
-        .status(400)
-        .json({
-          status: "error",
-          message: "Verification code not found for this user.",
-        });
+      return res.status(400).json({
+        status: "error",
+        message: "Verification code not found for this user.",
+      });
     }
 
     if (admin.expiresAt < new Date()) {
@@ -104,12 +105,10 @@ export const verifyCode = async (req, res) => {
       sameSite: "strict",
       maxAge: 3 * 60 * 60 * 1000,
     });
-    res
-      .status(200)
-      .json({
-        status: "success",
-        message: "Verification successful, login successful",
-      });
+    res.status(200).json({
+      status: "success",
+      message: "Verification successful, login successful",
+    });
   } catch (error) {
     console.error("Error during verification:", error);
     res.status(500).json({ status: "error", message: error.message });
@@ -125,4 +124,44 @@ export const profile = async (req, res) => {
 export const logout = (req, res) => {
   res.clearCookie("token");
   return res.json({ message: "Logged out successfully" });
+};
+
+export const uploadProfilePicture = async (req, res, next) => {
+  try {
+    if (!req.file) {
+      return res
+        .status(400)
+        .json({ message: "profilePicture file is required." });
+    }
+
+    const user = await User.findById(req.userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    const folder = process.env.CLOUDINARY_PROFILE_FOLDER || "profile-pictures";
+
+    const uploadResult = await cloudinary.uploader.upload(req.file.path, {
+      folder,
+      public_id: `user_${user._id}_${Date.now()}`,
+      overwrite: true,
+      use_filename: true,
+    });
+
+    user.profilePictureUrl = uploadResult.secure_url;
+    await user.save();
+
+    return res.json({
+      message: "Profile picture updated successfully.",
+      data: {
+        profilePictureUrl: user.profilePictureUrl,
+      },
+    });
+  } catch (error) {
+    return next(error);
+  } finally {
+    if (req.file?.path) {
+      await fs.unlink(req.file.path).catch(() => {});
+    }
+  }
 };
